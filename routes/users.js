@@ -74,7 +74,7 @@ router.post("/register", async (req, res) => {
         html: `<h1>Email confirmation</h1>
         <h3>hi ${req.body.userName}</h3>
         <p>Kindly confirm your email by clicking below link</p>
-        <a href= http://localhost:4000/users/confirm/${token}>Click here</a>
+        <a href= https://nodejs-task-4.herokuapp.com/users/confirm/${token}>Click here</a>
         <p>This link will get expired within 15 minutes of time</p>`,
       });
 
@@ -170,7 +170,7 @@ router.post("/login", async (req, res) => {
           html: `<h1>Email confirmation</h1>
           <h3>Hi ${user.userName}</h3>
           <p>Kindly confirm your email by clicking below link</p>
-          <a href=http://localhost:4000/users/confirm/${token}>Click here</a>
+          <a href=https://nodejs-task-4.herokuapp.com/users/confirm/${token}>Click here</a>
           <p>This link will get expired within 15 minutes of time</p>`,
         });
 
