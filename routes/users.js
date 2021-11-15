@@ -42,14 +42,11 @@ router.get("/all", async (req, res) => {
 
 router.post("/register", async (req, res) => {
   const client = await MongoClient.connect(dbUrl);
+  let email = req.body.email;
   try {
     const db = await client.db("studentManagement");
-    let user = await db.collection("users").findOne({ email: req.body.email });
-    if (user) {
-      res.send({
-        message: "User already exists and try to login",
-      });
-    } else {
+    let user = await db.collection("users").findOne({ email: email });
+    if (!user) {
       const hash = await hashing(req.body.password);
       req.body.password = hash;
       let data = await db.collection("users").insertOne(req.body);
@@ -58,7 +55,6 @@ router.post("/register", async (req, res) => {
         email: req.body.email,
       });
 
-      
       const transport = await nodemailer.createTransport({
         service: "gmail",
         auth: {
@@ -74,12 +70,16 @@ router.post("/register", async (req, res) => {
         html: `<h1>Email confirmation</h1>
         <h3>hi ${req.body.userName}</h3>
         <p>Kindly confirm your email by clicking below link</p>
-        <a href= http://localhost:4000/users/confirm/${token}>Click here</a>
+        <a href= https://nodejs-task-4.herokuapp.com/users/confirm/${token}>Click here</a>
         <p>This link will get expired within 15 minutes of time</p>`,
       });
 
       res.send({
         message: "Registraion success",
+      });
+    } else {
+      res.send({
+        message: "User already exists and try to login",
       });
     }
   } catch (error) {
@@ -99,17 +99,17 @@ router.get("/confirm/:token", async (req, res) => {
   const token = req.params.token;
   const mail = await authenticate(token);
   try {
-    const db =  client.db("studentManagement");
+    const db = client.db("studentManagement");
     const user = await db.collection("users").findOne({ email: mail });
-    if (user) {
+    if (!user) {
+      res.send({
+        message: "Invalid Link",
+      });
+    } else {
       let data = await db
         .collection("users")
         .updateOne({ email: mail }, { $set: { status: "Active" } });
       res.sendFile(path.join(__dirname, "../library/confirmation.html"));
-    } else {
-      res.send({
-        message: "Invalid Link",
-      });
     }
   } catch (error) {
     console.log(error);
@@ -130,7 +130,11 @@ router.post("/login", async (req, res) => {
   try {
     const db = await client.db("studentManagement");
     let user = await db.collection("users").findOne({ email: email });
-    if (user) {
+    if (!user) {
+      res.send({
+        message: "User does not exist",
+      });
+    } else {
       if (user.status == "Active") {
         const compare = await hashCompare(password, user.password);
         if (compare) {
@@ -143,7 +147,7 @@ router.post("/login", async (req, res) => {
             .updateOne({ email: user.email }, { $set: { token: token } });
           res.send({
             token,
-            message: "Login succesufully"
+            message: "Login succesufully",
           });
         } else {
           res.send({
@@ -155,7 +159,7 @@ router.post("/login", async (req, res) => {
           userName: user.userName,
           email: user.email,
         });
-        
+
         const transport = await nodemailer.createTransport({
           service: "gmail",
           auth: {
@@ -170,7 +174,7 @@ router.post("/login", async (req, res) => {
           html: `<h1>Email confirmation</h1>
           <h3>Hi ${user.userName}</h3>
           <p>Kindly confirm your email by clicking below link</p>
-          <a href=http://localhost:4000/users/confirm/${token}>Click here</a>
+          <a href=https://nodejs-task-4.herokuapp.com/users/confirm/${token}>Click here</a>
           <p>This link will get expired within 15 minutes of time</p>`,
         });
 
@@ -178,10 +182,6 @@ router.post("/login", async (req, res) => {
           message: "Account activation is require and check your mail",
         });
       }
-    } else {
-      res.send({
-        message: "User does not exist",
-      });
     }
   } catch (error) {
     console.log(error);
@@ -201,7 +201,11 @@ router.post("/reset-password", async (req, res) => {
   try {
     const db = await client.db("studentManagement");
     const user = await db.collection("users").findOne({ email: email });
-    if (user) {
+    if (!user) {
+      res.send({
+        message: "Invalid mail id",
+      });
+    } else {
       const token = await createJWT({
         userName: user.userName,
         email: user.email,
@@ -210,11 +214,11 @@ router.post("/reset-password", async (req, res) => {
         .collection("users")
         .updateOne({ email: email }, { $set: { token: token } });
       const transport = await nodemailer.createTransport({
-         service: "gmail",
-          auth: {
-            user: sender,
-            pass: pwd,
-          },
+        service: "gmail",
+        auth: {
+          user: sender,
+          pass: pwd,
+        },
       });
       const resetMail = await transport.sendMail({
         from: "Backend <yogeshsundar142@gmail.com>",
@@ -229,10 +233,6 @@ router.post("/reset-password", async (req, res) => {
 
       res.send({
         message: "Reset link sent your mail",
-      });
-    } else {
-      res.send({
-        message: "Invalid mail id",
       });
     }
   } catch (error) {
@@ -249,7 +249,7 @@ router.post("/reset-password", async (req, res) => {
 
 router.post("/update-password/", async (req, res) => {
   const client = await MongoClient.connect(dbUrl);
-  const {token,password} = req.body;
+  const { token, password } = req.body;
 
   const mail = await authenticate(token);
   if (mail) {
